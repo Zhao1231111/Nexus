@@ -1,6 +1,7 @@
 """One RoboDojo episode, native action stepping and success/timeout checks."""
 import hashlib
 from pathlib import Path
+import time
 import uuid
 import numpy as np
 from PIL import Image
@@ -100,7 +101,39 @@ class RoboDojoSession:
             require(sha256(actual_layout) == self.evaluation_identity['layout_sha256'],
                     'Native layout changed before reset')
         try:
-            self.env.reset(seed=[seed])
+            # Isaac Sim 的 reset 可能包含场景重建、稳定化物理步和相机渲染，耗时期间
+            # 默认没有输出。保留这些轻量阶段标记，方便无人值守运行区分“仍在工作”与
+            # 原生调用卡死；它们不改变 RPC 响应、物理步数或评测结果。
+            print(f'RPC_RESET_STAGE native_reset_begin seed={seed}', flush=True)
+            # EvalEnv.reset 内部会连续推进数百个无输出的物理步。仅在本次 reset
+            # 期间包装 sim_step，每完成 100 步报告一次进度，随后恢复原方法；包装器
+            # 不增加物理步、不改变 render 参数，也不会进入动作计数。
+            # 单元测试中的轻量替身没有 sim_step；此时直接调用 reset，保持原有
+            # 测试契约，同时真实 RoboDojo 环境仍获得物理步进度。
+            native_sim_step = getattr(self.env, 'sim_step', None)
+            reset_step_count = 0
+            reset_started_at = time.monotonic()
+
+            def monitored_sim_step(*args, **kwargs):
+                nonlocal reset_step_count
+                result = native_sim_step(*args, **kwargs)
+                reset_step_count += 1
+                if reset_step_count % 100 == 0:
+                    elapsed = time.monotonic() - reset_started_at
+                    print(
+                        f'RPC_RESET_PROGRESS sim_steps={reset_step_count} elapsed_s={elapsed:.1f}',
+                        flush=True,
+                    )
+                return result
+
+            if native_sim_step is not None:
+                self.env.sim_step = monitored_sim_step
+            try:
+                self.env.reset(seed=[seed])
+            finally:
+                if native_sim_step is not None:
+                    self.env.sim_step = native_sim_step
+            print('RPC_RESET_STAGE native_reset_done', flush=True)
         except Exception as error:
             # Only the native named exception is classified as an invalid layout;
             # infrastructure/model errors are never silently removed from evaluation.
@@ -109,15 +142,21 @@ class RoboDojoSession:
                 status='invalid_native_layout' if type(error).__name__ == 'UnStableError' else 'reset_error',
                 error_type=type(error).__name__, error=str(error)))
             raise
+        print('RPC_RESET_STAGE native_evaluation_begin', flush=True)
         registration = register_native_evaluation(self.env)
+        print('RPC_RESET_STAGE native_evaluation_done', flush=True)
         write_json(self.output/'native_evaluation.json', registration)
         self.episode_id = uuid.uuid4().hex
         self.episode_dir = self.output/self.episode_id
         self.episode_dir.mkdir()
         self.poisoned = False
+        print('RPC_RESET_STAGE kinematics_begin', flush=True)
         self.kinematics = DualKinematics(self.env)
+        print('RPC_RESET_STAGE kinematics_done', flush=True)
         write_json(self.output/'fk_validation.json', self.kinematics.check())
+        print('RPC_RESET_STAGE initial_observation_begin', flush=True)
         self._observe(record=True)
+        print('RPC_RESET_STAGE initial_observation_done', flush=True)
         fingerprints = {}
         for key, value in self.obs.items():
             arr = np.asarray(value)

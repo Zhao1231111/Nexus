@@ -31,8 +31,28 @@ def main():
     p.add_argument('--eval-seed', type=int, default=0, help='Published layout group, NOT the reset layout ID')
     p.add_argument('--eval-manifest', type=Path)
     p.add_argument('--case-file', type=Path)
+    p.add_argument(
+        '--visual',
+        action='store_true',
+        help='Show the Isaac Sim window for interactive smoke-test diagnosis.',
+    )
     AppLauncher.add_app_launcher_args(p)
-    args = p.parse_args(); args.headless = True; args.enable_cameras = True
+    args = p.parse_args()
+    # IsaacLab 3.0 不再仅凭 headless=False 打开窗口；未显式选择 visualizer 时，
+    # AppLauncher 会重新强制无头运行。因此 --visual 必须同时选择 Kit visualizer。
+    # 正式评测仍默认无头运行，无论是否显示窗口都保留相机 RPC 观测路径。
+    args.headless = not args.visual
+    if args.visual:
+        args.visualizer = ['kit']
+        args.visualizer_explicit = True
+    args.enable_cameras = True
+    # Isaac Sim 6 删除了一小部分 RoboDojo 仍会导入的旧模块。这里必须在创建
+    # SimulationApp 之前注入兼容搜索路径，保证 Kit 启动阶段也能解析这些模块。
+    from env.isaac_sim_compat import (
+        add_isaac_sim_compat_search_path,
+        enable_isaac_sim_compat_extensions,
+    )
+    add_isaac_sim_compat_search_path(args)
     from ..evaluation import read_panel, verify_assets, case_identity
     from ..io import require
     from env.global_configs import ROOT_DIR, BENCHMARK
@@ -59,6 +79,9 @@ def main():
         from src.eval_client.physx_warning_monitor import get_monitor
         get_monitor().start(enabled=True)
     app = AppLauncher(args).app
+    # 部分旧扩展只能在 SimulationApp 创建后启用；该调用与 RoboDojo 的 Isaac 6
+    # 冒烟入口保持一致，不改变 Nexus RPC 协议或上层控制逻辑。
+    enable_isaac_sim_compat_extensions(app)
     env = session = None
     try:
         from omegaconf import OmegaConf
@@ -83,7 +106,10 @@ def main():
         cfg, _ = process_config(cfg, task_name=args.task)
         cfg.eval_cfg.eval_num = 1
         cfg.camera.default_frequency = cfg.eval_cfg.observation.collect_freq
-        cfg.sim.seed = [0]  # Native startup; the controller later resets the selected layout_id.
+        # Isaac Sim 6 的布料对象必须在第一次 PhysX 初始化前生成，不能再依赖 RPC
+        # reset 后动态替换。因此冻结评测用例存在时，启动阶段就使用其 layout_id；
+        # 普通本地运行仍从布局 0 启动，并可按原协议执行后续 reset。
+        cfg.sim.seed = [int(evaluation_case['layout_id']) if evaluation_case else 0]
         # EEF corrections use bounded robot-only DLS, never object-aware cuRobo.
         for robot in cfg.robot.robots:
             robot.need_planner = False
