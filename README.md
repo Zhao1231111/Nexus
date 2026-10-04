@@ -209,7 +209,7 @@ The build verifies the preserved shared runtime and produces a self-contained `d
 
 ## Run a new evaluation
 
-The integrations depend on externally installed simulator and policy environments. They are **not** a standalone simulator distribution. RoboDojo uses Isaac Sim 5.1, the matching RoboDojo source/assets and its π₀.₅ OpenPI/JAX checkpoint. RoboLab has its own environment. Obtain these from their upstream projects under their own terms. See `hybrid_rollout/robodojo/SOURCE.json` for the recorded upstream revisions and checkpoint identity.
+The integrations depend on externally installed simulator and policy environments. They are **not** a standalone simulator distribution. The published RoboDojo results used Isaac Sim 5.1; the current local compatibility entry points require the external RoboDojo Isaac Sim 6.0.1 / IsaacLab 3.0 branch. See the [local launch guide](hybrid_rollout/robodojo/README.md) for the verified camera configuration and smoke command. RoboDojo also needs matching source/assets and, for the hybrid policy, its π₀.₅ OpenPI/JAX checkpoint. RoboLab has its own environment. Obtain these from their upstream projects under their own terms. See `hybrid_rollout/robodojo/SOURCE.json` for the recorded historical revisions and checkpoint identity.
 
 1. Prepare your simulator environment, OpenPI/JAX environment, checkpoint and Codex CLI. Keep these separate from the lightweight tools environment.
 2. Review `hybrid_rollout/robodojo/cluster.env.example` and set your paths, image, user/group IDs, credentials file paths and explicit case identity. Public export paths are generic examples, not runnable cluster credentials.

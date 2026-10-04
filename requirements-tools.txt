@@ -11,3 +11,4 @@ msgpack
 PyYAML
 omegaconf
 pytest
+h5py

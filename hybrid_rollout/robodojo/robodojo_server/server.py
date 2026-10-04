@@ -40,12 +40,13 @@ def main():
     args = p.parse_args()
     # IsaacLab 3.0 不再仅凭 headless=False 打开窗口；未显式选择 visualizer 时，
     # AppLauncher 会重新强制无头运行。因此 --visual 必须同时选择 Kit visualizer。
-    # 正式评测仍默认无头运行，无论是否显示窗口都保留相机 RPC 观测路径。
+    # 正式评测仍默认无窗口运行；相机所用 experience 由共享启动配置显式指定。
     args.headless = not args.visual
     if args.visual:
         args.visualizer = ['kit']
         args.visualizer_explicit = True
-    args.enable_cameras = True
+    from .launcher import configure_camera_app, resolved_camera_app
+    configure_camera_app(args)
     # Isaac Sim 6 删除了一小部分 RoboDojo 仍会导入的旧模块。这里必须在创建
     # SimulationApp 之前注入兼容搜索路径，保证 Kit 启动阶段也能解析这些模块。
     from env.isaac_sim_compat import (
@@ -78,12 +79,20 @@ def main():
     if enable_monitor:
         from src.eval_client.physx_warning_monitor import get_monitor
         get_monitor().start(enabled=True)
-    app = AppLauncher(args).app
+    launcher = AppLauncher(args)
+    app = launcher.app
     # 部分旧扩展只能在 SimulationApp 创建后启用；该调用与 RoboDojo 的 Isaac 6
     # 冒烟入口保持一致，不改变 Nexus RPC 协议或上层控制逻辑。
     enable_isaac_sim_compat_extensions(app)
     env = session = None
     try:
+        from .native_compat import install_geometry_device_compat
+        install_geometry_device_compat()
+        from ..io import write_json
+        launch_config = resolved_camera_app(launcher)
+        launch_config['native_compat'] = ['geometry_relative_pose_device']
+        write_json(args.output/'launch_config.json', launch_config)
+        print(json.dumps(dict(event='simulator_launch', **launch_config)), flush=True)
         from omegaconf import OmegaConf
         from env.global_configs import ENV_CONFIG_PATH, ROOT_DIR, BENCHMARK
         from utils.load_file import load_yaml
@@ -123,7 +132,6 @@ def main():
             resolved = env.seed_manager.seed_info[evaluation_case['layout_id']]['scene_layout']
             require(Path(resolved).resolve() == (Path(ROOT_DIR)/evaluation_case['layout']['path']).resolve(),
                     'Native SeedManager resolved a different layout')
-        from ..io import write_json
         write_json(args.output/'resolved_config.json', OmegaConf.to_container(cfg, resolve=True))
         session = RoboDojoSession(env, args.output, args.task,
             evaluation_identity=selected['identity'] if evaluation_case else None)

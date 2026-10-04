@@ -1,0 +1,6 @@
+interface:
+  display_name: "Nexus 演示语义标注"
+  short_description: "查看人工选定的 RGB-D 关键帧，定义语义参考并调用几何工具完成标注"
+  default_prompt: "使用 $nexus-demonstration-annotator 标注已人工选定阶段与关键帧的 Nexus 演示。"
+policy:
+  allow_implicit_invocation: false
