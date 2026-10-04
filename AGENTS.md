@@ -1,5 +1,11 @@
 # [AGENTS.md](http://AGENTS.md)
 
+## Skill rule
+For this project, ignore all optional skills unless I explicitly invoke one.
+
+Do not read or invoke skills automatically.
+In particular, do not use any skills from ~/.agents/skills unless I explicitly request them.
+
 ## Project scope
 
 ## Coding rules

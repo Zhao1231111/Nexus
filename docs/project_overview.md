@@ -1,5 +1,8 @@
 # Nexus 项目介绍与代码导航
 
+当前项目思路见 [project_concept.md](project_concept.md)。本文保留既有实现的代码导航，
+其中研究方向和开发顺序以当前项目思路文档为准。
+
 本文面向两类读者：第一次接手仓库的开发人员，以及需要继续开发本项目的 Agent。
 目标是用最短路径说明项目现状、运行架构、关键代码与开发边界。
 
@@ -28,9 +31,7 @@ Nexus 基于公开项目 **GPT 6 Astra as an Embodied Policy**。基础仓库已
 - π₀.₅ 策略服务；
 - rollout 记录、评测冻结、结果审计和报告发布。
 
-Nexus 的研究目标不是重写上述基础设施，而是在现有 `gpt_only` 基线上增加
-**可主动调用的度量几何工具**，研究显式几何信息能否减少通过真实控制动作进行的
-试探和修正。详细研究背景见 [project_build_handoff.md](project_build_handoff.md)。
+Nexus 的研究目标：详细研究背景见 [project_build_handoff.md](project_build_handoff.md)。
 
 目标方法可以概括为：
 
@@ -43,6 +44,8 @@ RGB 观察
   -> 仿真器执行并返回新观察
 ```
 
+
+
 ## 2. 当前状态
 
 仓库当前包含一套已完成的评测发布和一份 Nexus 开发交接说明。
@@ -54,16 +57,6 @@ RGB 观察
 - 10 个 RoboDojo 任务的冻结评测、case 配对和公开结果；
 - 独立 RoboLab 集成；
 - 实验归档、人工审核和双语报告工具链。
-
-尚未实现：
-
-- 场景深度查询工具；
-- 点云、区域 3D 坐标、表面法线、clearance 或 height map 工具；
-- 独立的 geometry-enabled evaluation method；
-- RGB-only 与 RGB + geometry-tool 的正式对照实验。
-
-现有 `kinematics.py` 只处理机器人自身的 FK 和局部 DLS 逆运动学。它不读取物体状态，
-也不是 Nexus 计划中的场景 geometry tool。
 
 ## 3. 总体架构
 
@@ -99,6 +92,8 @@ case 选择与批次隔离
         audit / paired evaluation / report
 ```
 
+
+
 ### 3.1 外层调度
 
 `cluster_entrypoint.sh` 校验运行环境、认证配置、模型版本和评测 manifest，然后进入
@@ -108,6 +103,8 @@ case 选择与批次隔离
 - RPC 端口是否释放；
 - controller 和 simulator 是否产生完整结果；
 - artifact manifest 是否通过验证。
+
+
 
 ### 3.2 单回合进程
 
@@ -127,7 +124,11 @@ case 选择与批次隔离
 - 调度器退出码不能代替 simulator 原生结果；
 - 报告只消费已冻结和已审计的产物，不参与在线决策。
 
+
+
 ## 4. 两条策略路径
+
+
 
 ### 4.1 GPT-only：Nexus 的主开发基线
 
@@ -154,6 +155,8 @@ GPT-only 不启动 π₀.₅，也不允许模型直接输出关节动作。每�
 - 执行 1～5 个控制步；
 - 每个真实控制 ACK 后重新计算局部 IK。
 
+
+
 ### 4.2 π₀.₅ + GPT：已完成的参考方法
 
 实现入口是
@@ -174,15 +177,19 @@ GPT-only 不启动 π₀.₅，也不允许模型直接输出关节动作。每�
 
 ## 5. 目录导航
 
+
+
 ### 仓库根目录
 
-- [`README.md`](../README.md)：公开发布说明、结果摘要和运行方式；
-- [`docs/`](./)：Nexus 交接文档与本项目介绍；
-- [`hybrid_rollout/`](../hybrid_rollout/)：在线控制、评测和报告源码；
-- [`public_results/`](../public_results/)：公开 case、分数和 provenance；
-- [`report_web/`](../report_web/)：已经编译的静态报告，不是主要开发源码；
-- [`release-manifest.json`](../release-manifest.json)：公开发布文件清单；
-- [`requirements-tools.txt`](../requirements-tools.txt)：轻量离线工具依赖。
+- `[README.md](../README.md)`：公开发布说明、结果摘要和运行方式；
+- `[docs/](./)`：Nexus 交接文档与本项目介绍；
+- `[hybrid_rollout/](../hybrid_rollout/)`：在线控制、评测和报告源码；
+- `[public_results/](../public_results/)`：公开 case、分数和 provenance；
+- `[report_web/](../report_web/)`：已经编译的静态报告，不是主要开发源码；
+- `[release-manifest.json](../release-manifest.json)`：公开发布文件清单；
+- `[requirements-tools.txt](../requirements-tools.txt)`：轻量离线工具依赖。
+
+
 
 ### `hybrid_rollout/robodojo/`
 
@@ -214,46 +221,60 @@ Isaac Sim 环境。Nexus 当前研究应以 RoboDojo `gpt_only` 为主线。
 - `preview.py`：支持 HTTP Range 的只读视频预览；
 - `package.py`、`package_article.py`：静态交付物打包。
 
+
+
 ## 6. 核心代码导航
+
+
 
 ### 理解进程和启动顺序
 
-- [`cluster_entrypoint.sh`](../hybrid_rollout/robodojo/cluster_entrypoint.sh)
-- [`batch.py`](../hybrid_rollout/robodojo/batch.py)
-- [`episode_entrypoint.sh`](../hybrid_rollout/robodojo/episode_entrypoint.sh)
-- [`run_local.sh`](../hybrid_rollout/robodojo/run_local.sh)
+- `[cluster_entrypoint.sh](../hybrid_rollout/robodojo/cluster_entrypoint.sh)`
+- `[batch.py](../hybrid_rollout/robodojo/batch.py)`
+- `[episode_entrypoint.sh](../hybrid_rollout/robodojo/episode_entrypoint.sh)`
+- `[run_local.sh](../hybrid_rollout/robodojo/run_local.sh)`
+
+
 
 ### 理解 Codex/Astra 如何控制 episode
 
-- [`skill/run.py`](../hybrid_rollout/robodojo/skill/run.py)：Codex thread、工具注册和事件循环；
-- [`skill/schema.py`](../hybrid_rollout/robodojo/skill/schema.py)：工具参数 schema；
-- [`skill/transport.py`](../hybrid_rollout/robodojo/skill/transport.py)：app-server JSON-RPC；
-- [`robodojo-gpt-only-rollout/SKILL.md`](../hybrid_rollout/robodojo/robodojo-gpt-only-rollout/SKILL.md)：Direct 方法提示和动作约束。
+- `[skill/run.py](../hybrid_rollout/robodojo/skill/run.py)`：Codex thread、工具注册和事件循环；
+- `[skill/schema.py](../hybrid_rollout/robodojo/skill/schema.py)`：工具参数 schema；
+- `[skill/transport.py](../hybrid_rollout/robodojo/skill/transport.py)`：app-server JSON-RPC；
+- `[robodojo-gpt-only-rollout/SKILL.md](../hybrid_rollout/robodojo/robodojo-gpt-only-rollout/SKILL.md)`：Direct 方法提示和动作约束。
+
+
 
 ### 理解在线控制
 
-- [`gpt_only_client.py`](../hybrid_rollout/robodojo/robodojo_server/gpt_only_client.py)：Nexus 主基线；
-- [`client.py`](../hybrid_rollout/robodojo/robodojo_server/client.py)：Hybrid 状态机；
-- [`session.py`](../hybrid_rollout/robodojo/robodojo_server/session.py)：仿真权威状态；
-- [`kinematics.py`](../hybrid_rollout/robodojo/robodojo_server/kinematics.py)：双臂 FK 和局部 DLS；
-- [`validation.py`](../hybrid_rollout/robodojo/robodojo_server/validation.py)：动作边界；
-- [`gate_assessment.py`](../hybrid_rollout/robodojo/robodojo_server/gate_assessment.py)：Hybrid 接管条件；
-- [`protocol.py`](../hybrid_rollout/robodojo/robodojo_server/protocol.py)：无自动重试的版本化 RPC。
+- `[gpt_only_client.py](../hybrid_rollout/robodojo/robodojo_server/gpt_only_client.py)`：Nexus 主基线；
+- `[client.py](../hybrid_rollout/robodojo/robodojo_server/client.py)`：Hybrid 状态机；
+- `[session.py](../hybrid_rollout/robodojo/robodojo_server/session.py)`：仿真权威状态；
+- `[kinematics.py](../hybrid_rollout/robodojo/robodojo_server/kinematics.py)`：双臂 FK 和局部 DLS；
+- `[validation.py](../hybrid_rollout/robodojo/robodojo_server/validation.py)`：动作边界；
+- `[gate_assessment.py](../hybrid_rollout/robodojo/robodojo_server/gate_assessment.py)`：Hybrid 接管条件；
+- `[protocol.py](../hybrid_rollout/robodojo/robodojo_server/protocol.py)`：无自动重试的版本化 RPC。
+
+
 
 ### 理解 π₀.₅
 
-- [`pi05_server/checkpoint.py`](../hybrid_rollout/robodojo/pi05_server/checkpoint.py)
-- [`pi05_server/server.py`](../hybrid_rollout/robodojo/pi05_server/server.py)
-- [`pi05_server/client.py`](../hybrid_rollout/robodojo/pi05_server/client.py)
+- `[pi05_server/checkpoint.py](../hybrid_rollout/robodojo/pi05_server/checkpoint.py)`
+- `[pi05_server/server.py](../hybrid_rollout/robodojo/pi05_server/server.py)`
+- `[pi05_server/client.py](../hybrid_rollout/robodojo/pi05_server/client.py)`
+
+
 
 ### 理解评测可信度
 
-- [`evaluation.py`](../hybrid_rollout/robodojo/evaluation.py)
-- [`artifact_manifest.py`](../hybrid_rollout/robodojo/artifact_manifest.py)
-- [`case_ledger.py`](../hybrid_rollout/robodojo/case_ledger.py)
-- [`paired_evaluation.py`](../hybrid_rollout/robodojo/paired_evaluation.py)
-- [`test_contract.py`](../hybrid_rollout/robodojo/test_contract.py)
-- [`test_native_evaluation.py`](../hybrid_rollout/robodojo/test_native_evaluation.py)
+- `[evaluation.py](../hybrid_rollout/robodojo/evaluation.py)`
+- `[artifact_manifest.py](../hybrid_rollout/robodojo/artifact_manifest.py)`
+- `[case_ledger.py](../hybrid_rollout/robodojo/case_ledger.py)`
+- `[paired_evaluation.py](../hybrid_rollout/robodojo/paired_evaluation.py)`
+- `[test_contract.py](../hybrid_rollout/robodojo/test_contract.py)`
+- `[test_native_evaluation.py](../hybrid_rollout/robodojo/test_native_evaluation.py)`
+
+
 
 ## 7. 运行产物与数据契约
 
@@ -298,6 +319,8 @@ run-root/
 
 ## 8. 关键工程约束
 
+
+
 ### 无回滚
 
 一个 simulator process 只运行一个 fresh episode。不能在同一 episode 中 reset、恢复旧状态
@@ -329,6 +352,8 @@ terminated 和 truncated 状态。
 
 ## 9. 推荐阅读顺序
 
+
+
 ### 第一轮：15～30 分钟建立全局概念
 
 1. 本文；
@@ -336,6 +361,8 @@ terminated 和 truncated 状态。
 3. [README.md](../README.md)；
 4. [run_local.sh](../hybrid_rollout/robodojo/run_local.sh)；
 5. [GPT-only SKILL.md](../hybrid_rollout/robodojo/robodojo-gpt-only-rollout/SKILL.md)。
+
+
 
 ### 第二轮：读透 GPT-only 基线
 
@@ -355,6 +382,8 @@ terminated 和 truncated 状态。
 3. `pi05_server/client.py`；
 4. `pi05_server/checkpoint.py`。
 
+
+
 ### 第四轮：理解实验和结果
 
 1. `evaluation.py`；
@@ -364,50 +393,5 @@ terminated 和 truncated 状态。
 5. `report_site/build.py`；
 6. `public_results/evaluation_cases.json` 和 `scores.csv`。
 
-## 10. Nexus 后续开发入口
 
-第一阶段应保留原始 `gpt_only` 作为不可变 baseline，并新增独立的 geometry-enabled method。
-推荐按以下边界实现：
 
-1. 定义 geometry query 的输入、输出、坐标系、单位和 schema version；
-2. 在 Simulator 侧实现只读查询，不推进物理时间；
-3. 在 Codex Controller 中注册独立动态工具；
-4. 将每次查询及其来源标定写入 controller 归档；
-5. 保持现有 `robodojo_act`、EEF 校验和执行语义不变；
-6. 为 RGB-only 和 geometry-enabled 使用同一冻结 case；
-7. 首轮实验只改变 geometry tool 这一项因素。
-
-第一阶段不建议同时加入 demonstration context、长期 memory、π₀.₅ 候选或新的分层控制器，
-否则难以归因 geometry tool 的真实贡献。
-
-建议优先评估：
-
-- 原生 success 和 score；
-- Astra decision 次数；
-- EEF correction/control steps；
-- 失败接触或重复试探次数；
-- geometry query 次数、类型和使用阶段；
-- token、墙钟时间和额外计算开销。
-
-## 11. 验证与测试
-
-轻量测试不需要启动模拟器或付费模型调用：
-
-```bash
-python3 -m pytest \
-  hybrid_rollout/robodojo/test_contract.py \
-  hybrid_rollout/robodojo/test_gpt_only.py \
-  hybrid_rollout/robodojo/test_native_evaluation.py \
-  hybrid_rollout/robodojo/test_proposal_diagnostics.py
-```
-
-报告相关测试：
-
-```bash
-python3 -m unittest \
-  hybrid_rollout.report_site.test_i18n \
-  hybrid_rollout.report_site.test_editorial_revision -v
-```
-
-完整 RoboDojo、OpenPI/JAX 和 Codex rollout 依赖仓库外部的 simulator assets、checkpoint、
-独立 Python 环境和授权账户。本仓库不是可独立运行的模拟器发行版。

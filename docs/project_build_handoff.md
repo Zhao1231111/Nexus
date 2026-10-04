@@ -1,5 +1,8 @@
 # Project Nexus — Handoff
 
+本文保留早期开发交接内容。当前项目思路及模块职责以
+[project_concept.md](project_concept.md) 为准。
+
 ## 背景
 
 我们关注 GPT-6 Astra 在 RoboDojo 中作为 embodied policy 的能力。现有工作表明，Astra 已具备较强的任务理解、语义推理和空间判断能力，但在精确操作中仍大量依赖 RGB 反馈进行 trial-and-error，不断修正 EEF。
@@ -24,61 +27,6 @@
 
 RoboICL 暂时不作为基础仓库。它的优势在于精确控制 demonstration、history 和 anchored memory，是另一条很有价值的研究方向；后续可以吸收它的 context/memory 思路，但第一阶段不要把 geometry、ICL 和 hierarchical control 同时混在一起。
 
-## 当前方法
-
-第一阶段只增加一种能力：
-
-\[
-\boxed{\text{Astra can actively query metric geometry}}
-\]
-
-概念流程是：
-
-\[
-RGB
-\rightarrow
-\text{Astra semantic reasoning}
-\rightarrow
-\text{geometry query}
-\rightarrow
-\text{metric 3D information}
-\rightarrow
-\text{Astra planning}
-\rightarrow
-EEF action
-\]
-
-重点不是把完整 point cloud 或 depth map 无条件塞给模型，而是把 geometry 设计成 agent tool，让 Astra 自己决定什么时候需要查询、查询哪里、如何利用结果。
-
-这样可以直接比较：
-
-\[
-\text{RGB-only Astra}
-\quad\text{vs}\quad
-\text{RGB + geometry-tool Astra}
-\]
-
-看显式 geometry 是否减少 EEF correction、失败接触和 Astra decision 次数。
-
-## 后续方向
-
-如果 geometry tool 有效，再逐步扩展。
-
-一条路线是增强几何能力，例如 region geometry、surface normal、clearance、height map 等。另一条更重要的路线是走向真正的 hierarchical policy：
-
-\[
-\text{Astra}
-\rightarrow
-\text{structured spatial / motor goal}
-\rightarrow
-\text{low-level visuomotor policy}
-\rightarrow
-\text{actions}
-\]
-
-长期希望高层利用 frozen MLLM 的推理和泛化能力，而低层不再承担语言理解，只执行非语言的空间或运动目标，例如 SE(3) subgoal、3D waypoint、object motion 或 contact target。
-
-RoboICL 的 demonstration context 和 anchored memory 可以在 geometry 本身验证有效之后再加入，从而分别研究 geometry、experience 和 hierarchy 的贡献。
 
 ## 开发原则
 
